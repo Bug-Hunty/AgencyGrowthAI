@@ -62,9 +62,18 @@ async function trustedGraphql<T>(query: string, variables: Record<string, unknow
   try {
     body = await response.json() as GraphQLResult<T>;
   } catch {
+    console.error('TRUSTED_NHOST_GRAPHQL_FAILURE', {
+      status: response.status,
+      reason: 'INVALID_JSON_RESPONSE',
+    });
     throw new TrustedNhostError('UPSTREAM_FAILURE');
   }
   if (!response.ok || body.errors?.length || !body.data) {
+    console.error('TRUSTED_NHOST_GRAPHQL_FAILURE', {
+      status: response.status,
+      errors: body.errors?.slice(0, 3).map(({ message }) => message ?? 'UNKNOWN_GRAPHQL_ERROR') ?? [],
+      hasData: Boolean(body.data),
+    });
     throw new TrustedNhostError('UPSTREAM_FAILURE');
   }
   return body.data;
