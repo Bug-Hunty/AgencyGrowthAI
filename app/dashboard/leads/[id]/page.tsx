@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Mail, Phone, Calendar, User, Activity, Brain, ShieldCheck } from 'lucide-react';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
@@ -12,13 +12,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { repo } from '@/lib/repo';
+import { isNhostMode, repo } from '@/lib/repo';
 import { LEAD_STATUSES, LEAD_SCORE_TIERS, ROLES } from '@/lib/constants';
 import { aiProvider } from '@/lib/ai';
 import type { Lead, Agent, Appointment, LeadEvent } from '@/lib/types';
 
-export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function LeadDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const [lead, setLead] = useState<Lead | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -134,7 +134,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Status</span>
                 <Select value={lead.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label="Lead status" className="w-32"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {LEAD_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                   </SelectContent>
@@ -142,8 +142,8 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Assigned Agent</span>
-                <Select value={lead.assigned_agent_id || 'unassigned'} onValueChange={handleAssignAgent}>
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <Select value={lead.assigned_agent_id || 'unassigned'} onValueChange={handleAssignAgent} disabled={isNhostMode}>
+                  <SelectTrigger aria-label="Assigned agent" className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
                     {agents.map((a) => <SelectItem key={a.id} value={a.id}>{a.first_name} {a.last_name}</SelectItem>)}
@@ -197,7 +197,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Click "Generate Summary" to get an AI-powered lead analysis.</p>
+                <p className="text-sm text-muted-foreground">Click &quot;Generate Summary&quot; to get an AI-powered lead analysis.</p>
               )}
             </CardContent>
           </Card>

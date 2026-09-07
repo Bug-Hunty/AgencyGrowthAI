@@ -7,6 +7,8 @@
 
 # testing
 /coverage
+/test-results
+/playwright-report
 
 # next.js
 /.next/
@@ -34,3 +36,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tenant isolation fixture credentials
+.env.test.local
+
+# playwright json report used by the baseline check
+.playwright-report.json
+
+# Local Netlify folder
+.netlify

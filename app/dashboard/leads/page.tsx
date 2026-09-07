@@ -139,7 +139,7 @@ export default function LeadsPage() {
                         {new Date(lead.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <Link href={`/dashboard/leads/${lead.id}`} onClick={(e) => e.stopPropagation()}>
+                        <Link href={`/dashboard/leads/${lead.id}`} aria-label={`View ${lead.first_name} ${lead.last_name}`} onClick={(e) => e.stopPropagation()}>
                           <ArrowRight className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                         </Link>
                       </TableCell>

@@ -18,8 +18,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    setHydrated(true);
     if (!loading && user) {
       router.push('/dashboard');
     }
@@ -74,10 +76,10 @@ export default function LoginPage() {
                   <Badge variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-400">DEMO MODE</Badge>
                 </div>
                 <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">
-                  Supabase Auth is not connected yet. Use the demo login below to explore the full dashboard
+                  Production authentication is not enabled in demo mode. Use the demo login below to explore the full dashboard
                   with seeded data from Horizon Financial Group.
                 </p>
-                <Button onClick={handleDemoLogin} className="mt-3 w-full" variant="default">
+                <Button onClick={handleDemoLogin} className="mt-3 w-full" variant="default" disabled={!hydrated || loading}>
                   Enter Demo Dashboard <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -93,7 +95,7 @@ export default function LoginPage() {
                     placeholder="you@agency.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    disabled={submitting || isDemo}
+                    disabled={!hydrated || loading || submitting || isDemo}
                   />
                 </div>
                 <div className="space-y-2">
@@ -104,10 +106,10 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    disabled={submitting || isDemo}
+                    disabled={!hydrated || loading || submitting || isDemo}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={submitting || isDemo}>
+                <Button type="submit" className="w-full" disabled={!hydrated || loading || submitting || isDemo}>
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
                 </Button>
               </form>
@@ -121,7 +123,7 @@ export default function LoginPage() {
         </Card>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link href="/login" className="font-medium text-primary hover:underline">
             Request access
           </Link>

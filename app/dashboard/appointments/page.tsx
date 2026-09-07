@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { repo } from '@/lib/repo';
+import { isNhostMode, repo } from '@/lib/repo';
 import { APPOINTMENT_STATUSES } from '@/lib/constants';
 import { calendarProvider } from '@/lib/integrations/calendar';
 import type { Appointment, Lead, Agent } from '@/lib/types';
@@ -99,7 +99,7 @@ export default function AppointmentsPage() {
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="mr-1 h-4 w-4" /> New Appointment</Button>
+            <Button size="sm" disabled={isNhostMode}><Plus className="mr-1 h-4 w-4" /> New Appointment</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -183,7 +183,7 @@ export default function AppointmentsPage() {
                     <TableCell className="hidden md:table-cell text-sm">{apt.meeting_type}</TableCell>
                     <TableCell>
                       <Select value={apt.status} onValueChange={(v) => handleStatusChange(apt.id, v)}>
-                        <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                        <SelectTrigger aria-label={`Appointment status for ${leadMap[apt.lead_id] || 'lead'}`} className="w-36"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {APPOINTMENT_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                         </SelectContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ShieldCheck, ArrowRight, ArrowLeft, CheckCircle2, GraduationCap, Calendar, Loader2 } from 'lucide-react';
 import { PublicShell } from '@/components/public/public-shell';
@@ -14,7 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { scoreLead, generateHealthSnapshot } from '@/lib/scoring';
-import { repo } from '@/lib/repo';
+import { isNhostMode, repo } from '@/lib/repo';
+import { createPublicAppointment, createPublicLead } from '@/lib/public-intake';
 import { AGENCY_CONFIG } from '@/lib/constants';
 import type { CheckupResponses, FinancialHealthSnapshot, Lead } from '@/lib/types';
 
@@ -43,11 +44,48 @@ export default function FinancialCheckupPage() {
     phone: '',
   });
 
+  const contactFieldsRef = useRef<HTMLDivElement>(null);
+  const leadIdempotencyKeyRef = useRef<string | null>(null);
+  const appointmentIdempotencyKeyRef = useRef<string | null>(null);
+
+  const updateContact = (key: keyof typeof contact, value: string) => {
+    setContact((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // The contact inputs can already hold a value that React never observed: the visitor
+  // typed before hydration finished, or the browser autofilled the form. Neither fires
+  // onChange, so the fields look filled while validation still sees empty strings and
+  // keeps Continue disabled. Adopt whatever the DOM holds once we mount.
+  useEffect(() => {
+    const container = contactFieldsRef.current;
+    if (!container) return;
+    setContact((prev) => {
+      const adopted = { ...prev };
+      let changed = false;
+      (Object.keys(prev) as (keyof typeof prev)[]).forEach((key) => {
+        const value = container.querySelector<HTMLInputElement>(`#${key}`)?.value ?? '';
+        if (value && !prev[key]) {
+          adopted[key] = value;
+          changed = true;
+        }
+      });
+      return changed ? adopted : prev;
+    });
+  }, []);
+
   const updateForm = (key: keyof CheckupResponses, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const canProceedStep1 = contact.first_name && contact.last_name && contact.email && contact.phone;
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  const isValidPhone = (value: string) => value.trim().length >= 7 && /^[0-9()+\-\s.]{7,}$/.test(value.trim());
+
+  const canProceedStep1 =
+    contact.first_name.trim().length > 0 &&
+    contact.last_name.trim().length > 0 &&
+    isValidEmail(contact.email) &&
+    isValidPhone(contact.phone);
+
   const canProceedStep2 =
     form.age_range && form.employment_status && form.household_income_range && form.dependents;
   const canProceedStep3 =
@@ -61,24 +99,27 @@ export default function FinancialCheckupPage() {
     }
     setSubmitting(true);
     try {
-      const { score, tier } = scoreLead(form);
+      // The repository derives and stores the score itself; this copy is only for the summary text.
+      const { score } = scoreLead(form);
       const snapshot = generateHealthSnapshot(form);
 
-      const lead = await repo.createLead({
+      const leadInput = {
         first_name: contact.first_name,
         last_name: contact.last_name,
         email: contact.email,
         phone: contact.phone,
         source: 'direct',
-        score,
-        score_tier: tier,
         interest: form.primary_goal.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
         consent: true,
         consent_method: 'checkup_form',
         preferred_contact: form.preferred_contact_method,
         checkup_responses: form,
         ai_summary: `${contact.first_name} ${contact.last_name} completed the financial checkup. Score: ${score}/100. Primary goal: ${form.primary_goal.replace(/_/g, ' ')}.`,
-      });
+      };
+      if (!leadIdempotencyKeyRef.current) leadIdempotencyKeyRef.current = crypto.randomUUID();
+      const lead = isNhostMode
+        ? await createPublicLead(leadInput, leadIdempotencyKeyRef.current)
+        : await repo.createLead(leadInput);
 
       setResult({ lead, snapshot });
       setStep(4);
@@ -93,13 +134,16 @@ export default function FinancialCheckupPage() {
     if (!result) return;
     setSubmitting(true);
     try {
-      await repo.createAppointment({
+      const appointmentInput = {
         lead_id: result.lead.id,
         date: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
         time: '10:00',
         meeting_type: 'Educational Consultation',
         notes: 'Lead requested appointment after completing financial checkup.',
-      });
+      };
+      if (!appointmentIdempotencyKeyRef.current) appointmentIdempotencyKeyRef.current = crypto.randomUUID();
+      if (isNhostMode) await createPublicAppointment(appointmentInput, appointmentIdempotencyKeyRef.current);
+      else await repo.createAppointment(appointmentInput);
       toast.success('Appointment requested! An agent will contact you shortly.');
       setStep(5);
     } catch {
@@ -134,7 +178,7 @@ export default function FinancialCheckupPage() {
               <span>Step {step} of 3</span>
               <span>{Math.round((step / 3) * 100)}% complete</span>
             </div>
-            <Progress value={(step / 3) * 100} className="mt-2" />
+            <Progress aria-label="Financial checkup progress" value={(step / 3) * 100} className="mt-2" />
           </div>
         )}
 
@@ -143,26 +187,26 @@ export default function FinancialCheckupPage() {
           <Card className="animate-fade-in border-border/60">
             <CardHeader>
               <CardTitle>Your Contact Information</CardTitle>
-              <CardDescription>We'll use this to send your results and schedule a conversation.</CardDescription>
+              <CardDescription>We&apos;ll use this to send your results and schedule a conversation.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4" ref={contactFieldsRef}>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="first_name">First name *</Label>
-                  <Input id="first_name" value={contact.first_name} onChange={(e) => setContact({ ...contact, first_name: e.target.value })} />
+                  <Input id="first_name" value={contact.first_name} onChange={(e) => updateContact('first_name', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="last_name">Last name *</Label>
-                  <Input id="last_name" value={contact.last_name} onChange={(e) => setContact({ ...contact, last_name: e.target.value })} />
+                  <Input id="last_name" value={contact.last_name} onChange={(e) => updateContact('last_name', e.target.value)} />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email *</Label>
-                <Input id="email" type="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+                <Input id="email" type="email" value={contact.email} onChange={(e) => updateContact('email', e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone *</Label>
-                <Input id="phone" type="tel" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
+                <Input id="phone" type="tel" value={contact.phone} onChange={(e) => updateContact('phone', e.target.value)} />
               </div>
               <div className="flex justify-end pt-4">
                 <Button onClick={() => setStep(2)} disabled={!canProceedStep1}>
@@ -383,7 +427,7 @@ export default function FinancialCheckupPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Your educational consultation has been requested. You'll receive a confirmation at {contact.email}.
+                Your educational consultation has been requested. You&apos;ll receive a confirmation at {contact.email}.
               </p>
               <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Button asChild variant="outline">

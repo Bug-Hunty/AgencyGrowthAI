@@ -8,6 +8,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://agencygrowthai.example'),
+  alternates: { canonical: '/' },
   title: {
     default: 'AgencyGrowthAI — Turn Digital Traffic Into Qualified Financial Conversations',
     template: '%s | AgencyGrowthAI',

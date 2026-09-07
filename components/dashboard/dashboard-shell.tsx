@@ -12,7 +12,8 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { isDemoMode } from '@/lib/repo';
+import { isDemoMode, repo } from '@/lib/repo';
+import type { Agency } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -34,12 +35,18 @@ export function DashboardShell({ children, title, breadcrumbs }: { children: Rea
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [agency, setAgency] = useState<Agency | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    repo.getAgency().then(setAgency).catch(() => setAgency(null));
+  }, [user]);
 
   if (loading) {
     return (
@@ -57,13 +64,13 @@ export function DashboardShell({ children, title, breadcrumbs }: { children: Rea
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
           <TrendingUp className="h-5 w-5 text-primary-foreground" />
         </div>
-        <span className="text-base font-bold">AgencyGrowthAI</span>
+        <span className="text-base font-bold">{agency?.name || 'AgencyGrowthAI'}</span>
       </Link>
 
       {isDemo && (
         <div className="mx-4 mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950/30">
           <span className="text-xs font-medium text-amber-700 dark:text-amber-400">DEMO MODE</span>
-          <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-500">Demo data — Horizon Financial Group</p>
+          <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-500">Demo data — {agency?.name || 'configured agency'}</p>
         </div>
       )}
 

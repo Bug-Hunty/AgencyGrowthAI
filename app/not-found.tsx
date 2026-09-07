@@ -6,7 +6,7 @@ export default function NotFound() {
     <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
       <h1 className="text-6xl font-bold text-primary">404</h1>
       <p className="mt-4 text-xl font-semibold">Page Not Found</p>
-      <p className="mt-2 text-sm text-muted-foreground">The page you're looking for doesn't exist or has been moved.</p>
+      <p className="mt-2 text-sm text-muted-foreground">The page you&apos;re looking for doesn&apos;t exist or has been moved.</p>
       <Button asChild className="mt-6">
         <Link href="/">Back to Home</Link>
       </Button>

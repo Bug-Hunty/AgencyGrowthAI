@@ -11,14 +11,28 @@ import type {
   CandidateEvent,
   DashboardMetrics,
   CheckupResponses,
+  ContentStatus,
 } from '@/lib/types';
+import type {
+  CreateAppointmentInput,
+  CreateCandidateInput,
+  CreateContentAssetInput,
+  CreateLeadInput,
+  UpdateAppointmentInput,
+  UpdateCandidateInput,
+  UpdateLeadInput,
+} from './types';
 import { scoreTier } from '@/lib/constants';
+import { scoreCandidate, scoreLead } from '@/lib/scoring';
 
 // DEMO DATA — All people and activity are fictional.
 // This repository provides the same interfaces as the Supabase implementation.
 // When Supabase is connected, the app switches to live data without UI changes.
 
 const DEMO_AGENCY_ID = 'a0000000-0000-0000-0000-000000000001';
+
+// Stands in for the acting user until content authoring is bound to a real session.
+const DEMO_AUTHOR_AGENT_ID = 'ag-005';
 
 const demoAgency: Agency = {
   id: DEMO_AGENCY_ID,
@@ -244,22 +258,27 @@ export const demoRepository = {
     return demoAuditLogs;
   },
 
-  async createLead(data: Partial<Lead>): Promise<Lead> {
+  async createLead(data: CreateLeadInput): Promise<Lead> {
+    // Score is derived here, not accepted from the caller.
+    const scored = data.checkup_responses
+      ? scoreLead(data.checkup_responses)
+      : { score: 0, tier: 'low' as const };
+
     const newLead: Lead = {
       id: `lead-new-${Date.now()}`,
       agency_id: DEMO_AGENCY_ID,
-      first_name: data.first_name || '',
-      last_name: data.last_name || '',
-      email: data.email || '',
-      phone: data.phone || '',
+      first_name: data.first_name,
+      last_name: data.last_name,
+      email: data.email,
+      phone: data.phone,
       source: data.source || 'direct',
       campaign_id: data.campaign_id || null,
       utm_source: data.utm_source || null,
       utm_medium: data.utm_medium || null,
       utm_campaign: data.utm_campaign || null,
       status: 'new',
-      score: data.score || 0,
-      score_tier: data.score_tier || 'low',
+      score: scored.score,
+      score_tier: scored.tier,
       interest: data.interest || null,
       assigned_agent_id: null,
       consent: data.consent || false,
@@ -275,21 +294,21 @@ export const demoRepository = {
     return newLead;
   },
 
-  async updateLead(id: string, updates: Partial<Lead>): Promise<Lead | null> {
+  async updateLead(id: string, updates: UpdateLeadInput): Promise<Lead | null> {
     const lead = demoLeads.find((l) => l.id === id);
     if (!lead) return null;
     Object.assign(lead, updates, { last_activity: new Date().toISOString() });
     return lead;
   },
 
-  async createAppointment(data: Partial<Appointment>): Promise<Appointment> {
+  async createAppointment(data: CreateAppointmentInput): Promise<Appointment> {
     const newApt: Appointment = {
       id: `apt-new-${Date.now()}`,
       agency_id: DEMO_AGENCY_ID,
-      lead_id: data.lead_id || '',
+      lead_id: data.lead_id,
       agent_id: data.agent_id || null,
-      date: data.date || new Date().toISOString().split('T')[0],
-      time: data.time || '10:00',
+      date: data.date,
+      time: data.time,
       meeting_type: data.meeting_type || 'Educational Consultation',
       status: 'requested',
       notes: data.notes || null,
@@ -305,31 +324,34 @@ export const demoRepository = {
     return newApt;
   },
 
-  async updateAppointment(id: string, updates: Partial<Appointment>): Promise<Appointment | null> {
+  async updateAppointment(id: string, updates: UpdateAppointmentInput): Promise<Appointment | null> {
     const apt = demoAppointments.find((a) => a.id === id);
     if (!apt) return null;
     Object.assign(apt, updates, { updated_at: new Date().toISOString() });
     return apt;
   },
 
-  async createCandidate(data: Partial<Candidate>): Promise<Candidate> {
+  async createCandidate(data: CreateCandidateInput): Promise<Candidate> {
+    // Score is derived here, not accepted from the caller.
+    const scored = scoreCandidate(data);
+
     const newCand: Candidate = {
       id: `cand-new-${Date.now()}`,
       agency_id: DEMO_AGENCY_ID,
-      first_name: data.first_name || '',
-      last_name: data.last_name || '',
-      email: data.email || '',
-      phone: data.phone || '',
-      state: data.state || '',
-      current_occupation: data.current_occupation || '',
-      years_experience: data.years_experience || '',
-      why_interested: data.why_interested || '',
-      sales_experience: data.sales_experience || 'none',
-      financial_services_experience: data.financial_services_experience || 'none',
-      preferred_contact: data.preferred_contact || 'email',
+      first_name: data.first_name,
+      last_name: data.last_name,
+      email: data.email,
+      phone: data.phone,
+      state: data.state,
+      current_occupation: data.current_occupation,
+      years_experience: data.years_experience,
+      why_interested: data.why_interested,
+      sales_experience: data.sales_experience,
+      financial_services_experience: data.financial_services_experience,
+      preferred_contact: data.preferred_contact,
       status: 'new',
-      score: data.score || 0,
-      score_breakdown: data.score_breakdown || { interest: 0, experience: 0, availability: 0, communication: 0, career_intent: 0 },
+      score: scored.score,
+      score_breakdown: scored.breakdown,
       assigned_agent_id: null,
       created_at: new Date().toISOString(),
     };
@@ -337,17 +359,17 @@ export const demoRepository = {
     return newCand;
   },
 
-  async updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | null> {
+  async updateCandidate(id: string, updates: UpdateCandidateInput): Promise<Candidate | null> {
     const cand = demoCandidates.find((c) => c.id === id);
     if (!cand) return null;
     Object.assign(cand, updates);
     return cand;
   },
 
-  async updateContentStatus(id: string, status: string): Promise<ContentAsset | null> {
+  async updateContentStatus(id: string, status: ContentStatus): Promise<ContentAsset | null> {
     const asset = demoContentAssets.find((a) => a.id === id);
     if (!asset) return null;
-    asset.status = status as ContentAsset['status'];
+    asset.status = status;
     asset.updated_at = new Date().toISOString();
     if (status === 'approved') {
       asset.approval_date = new Date().toISOString();
@@ -355,15 +377,16 @@ export const demoRepository = {
     return asset;
   },
 
-  async createContentAsset(data: Partial<ContentAsset>): Promise<ContentAsset> {
+  async createContentAsset(data: CreateContentAssetInput): Promise<ContentAsset> {
     const newAsset: ContentAsset = {
       id: `content-new-${Date.now()}`,
       agency_id: DEMO_AGENCY_ID,
-      title: data.title || 'Untitled',
-      type: data.type || 'social_post',
-      content: data.content || '',
+      title: data.title,
+      type: data.type,
+      content: data.content,
       status: 'draft',
-      created_by: data.created_by || 'ag-005',
+      // TODO: resolve the acting user from the session once real auth exists.
+      created_by: DEMO_AUTHOR_AGENT_ID,
       reviewer: null,
       approval_date: null,
       version: 1,

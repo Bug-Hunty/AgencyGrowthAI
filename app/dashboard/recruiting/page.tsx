@@ -102,7 +102,7 @@ export default function RecruitingPage() {
                     </TableCell>
                     <TableCell>
                       <Select value={c.status} onValueChange={(v) => handleStatusChange(c.id, v)}>
-                        <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                        <SelectTrigger aria-label={`Candidate status for ${c.first_name} ${c.last_name}`} className="w-36"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {CANDIDATE_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                         </SelectContent>

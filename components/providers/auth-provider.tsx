@@ -1,13 +1,15 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, Fragment, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { User } from '@supabase/supabase-js';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import type { StoredSession } from '@nhost/nhost-js';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
-import { isDemoMode } from '@/lib/repo';
+import { getNhostBrowserClient } from '@/lib/nhost/client';
+import { dataMode, isDemoMode, isNhostMode } from '@/lib/repo';
 import type { AgencyRole } from '@/lib/types';
 
-interface DemoUser {
+interface AppUser {
   id: string;
   email: string;
   agency_id: string;
@@ -17,7 +19,7 @@ interface DemoUser {
 }
 
 interface AuthContextType {
-  user: DemoUser | null;
+  user: AppUser | null;
   loading: boolean;
   isDemo: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -28,7 +30,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEMO_USER: DemoUser = {
+const DEMO_USER: AppUser = {
   id: 'demo-user-001',
   email: 'admin@horizonfinancial.example',
   agency_id: 'a0000000-0000-0000-0000-000000000001',
@@ -40,7 +42,7 @@ const DEMO_USER: DemoUser = {
 const DEMO_SESSION_KEY = 'agag-demo-session';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<DemoUser | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -53,6 +55,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setLoading(false);
       return;
+    }
+
+    if (isNhostMode) {
+      const client = getNhostBrowserClient();
+      let active = true;
+
+      const restoreSession = async () => {
+        try {
+          const session = await client.refreshSession(60);
+          if (active) setUser(session ? mapNhostUser(session) : null);
+        } catch {
+          client.clearSession();
+          if (active) setUser(null);
+        } finally {
+          if (active) setLoading(false);
+        }
+      };
+
+      void restoreSession();
+      const unsubscribe = client.sessionStorage.onChange((session) => {
+        if (!active) return;
+        try {
+          setUser(session ? mapNhostUser(session) : null);
+        } catch {
+          client.clearSession();
+          setUser(null);
+        }
+        setLoading(false);
+      });
+
+      return () => {
+        active = false;
+        unsubscribe();
+      };
     }
 
     // Supabase auth path
@@ -82,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const mapUser = (sbUser: User) => {
+  const mapUser = (sbUser: SupabaseUser) => {
     const metaData = sbUser.user_metadata || {};
     const appData = (sbUser.app_metadata || {}) as Record<string, string>;
     setUser({
@@ -103,6 +139,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: null };
     }
 
+    if (isNhostMode) {
+      try {
+        const client = getNhostBrowserClient();
+        const response = await client.auth.signInEmailPassword({ email, password });
+        const session = client.getUserSession();
+        if (!response.body.session || !session) {
+          client.clearSession();
+          return { error: response.body.mfa ? 'Multi-factor authentication is not supported in this pilot gate.' : 'Nhost did not return an authenticated session.' };
+        }
+        setUser(mapNhostUser(session));
+        return { error: null };
+      } catch (error) {
+        getNhostBrowserClient().clearSession();
+        return { error: error instanceof Error ? error.message : 'Nhost authentication failed.' };
+      }
+    }
+
     if (!supabase) return { error: 'Authentication not configured' };
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -115,6 +168,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(DEMO_USER);
       sessionStorage.setItem(DEMO_SESSION_KEY, 'true');
       return { error: null };
+    }
+
+
+    if (isNhostMode) {
+      return { error: 'Nhost signup is not enabled in Phase 3A.' };
     }
 
     if (!supabase) return { error: 'Authentication not configured' };
@@ -136,6 +194,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    if (isNhostMode) {
+      const client = getNhostBrowserClient();
+      const session = client.getUserSession();
+      try {
+        if (session?.refreshToken) {
+          await client.auth.signOut({ refreshToken: session.refreshToken });
+        }
+      } finally {
+        client.clearSession();
+        setUser(null);
+        router.push('/login');
+      }
+      return;
+    }
+
     if (supabase) {
       await supabase.auth.signOut();
     }
@@ -150,9 +223,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, loading, isDemo: isDemoMode, signIn, signUp, signOut, demoLogin }}>
-      {children}
+      <Fragment key={user?.id ?? `${dataMode}-anonymous`}>{children}</Fragment>
     </AuthContext.Provider>
   );
+}
+
+function mapNhostUser(session: StoredSession): AppUser {
+  const nhostUser = session.user;
+  if (!nhostUser) throw new Error('NHOST_SESSION_INVALID: session user is absent.');
+
+  const claims = session.decodedToken['https://hasura.io/jwt/claims'] ?? {};
+  const boundUserId = claims['x-hasura-user-id'];
+  const effectiveRole = claims['x-hasura-default-role'];
+  if (boundUserId !== nhostUser.id) {
+    throw new Error('NHOST_IDENTITY_BINDING_FAILED: JWT identity does not match the session user.');
+  }
+  if (effectiveRole !== 'user' || nhostUser.defaultRole !== 'user') {
+    throw new Error('NHOST_ROLE_INVALID: the pilot requires the normal user role.');
+  }
+
+  const metadata = nhostUser.metadata ?? {};
+  const displayName = nhostUser.displayName?.trim() ?? '';
+  const displayParts = displayName.split(/\s+/).filter(Boolean);
+  const firstName = typeof metadata.first_name === 'string'
+    ? metadata.first_name
+    : displayParts[0] ?? 'Nhost';
+  const lastName = typeof metadata.last_name === 'string'
+    ? metadata.last_name
+    : displayParts.slice(1).join(' ');
+
+  return {
+    id: nhostUser.id,
+    email: nhostUser.email ?? '',
+    agency_id: '',
+    role: 'agent',
+    first_name: firstName,
+    last_name: lastName,
+  };
 }
 
 export function useAuth() {

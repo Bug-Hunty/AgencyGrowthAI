@@ -1,3 +1,5 @@
+import type { ContentStatus } from '@/lib/types';
+
 // Central agency/tenant configuration — used across all UI and flows
 
 export const AGENCY_CONFIG = {
@@ -58,7 +60,7 @@ export const CANDIDATE_STATUSES: { value: string; label: string }[] = [
   { value: 'declined', label: 'Declined' },
 ];
 
-export const CONTENT_STATUSES: { value: string; label: string }[] = [
+export const CONTENT_STATUSES: { value: ContentStatus; label: string }[] = [
   { value: 'draft', label: 'Draft' },
   { value: 'pending_review', label: 'Pending Review' },
   { value: 'approved', label: 'Approved' },

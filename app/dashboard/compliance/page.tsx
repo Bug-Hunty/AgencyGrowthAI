@@ -15,7 +15,12 @@ import { toast } from 'sonner';
 import { repo } from '@/lib/repo';
 import { CONTENT_STATUSES, AGENCY_CONFIG } from '@/lib/constants';
 import { aiProvider } from '@/lib/ai';
-import type { ContentAsset } from '@/lib/types';
+import type { ContentAsset, ContentStatus } from '@/lib/types';
+
+// Radix hands back a plain string; validate it against the known statuses rather than
+// asserting the type away — this is the Compliance Center's status field.
+const isContentStatus = (value: string): value is ContentStatus =>
+  CONTENT_STATUSES.some((s) => s.value === value);
 
 const statusColors: Record<string, string> = {
   draft: 'border-slate-400 text-slate-600',
@@ -43,7 +48,7 @@ export default function CompliancePage() {
     })();
   }, []);
 
-  const handleStatusChange = async (id: string, status: string) => {
+  const handleStatusChange = async (id: string, status: ContentStatus) => {
     const updated = await repo.updateContentStatus(id, status);
     if (updated) {
       setAssets((prev) => prev.map((a) => a.id === id ? updated : a));
@@ -68,7 +73,6 @@ export default function CompliancePage() {
         type: newContent.type,
         content: draft.content,
         ai_generated: true,
-        created_by: 'ag-005',
       });
       setAssets((prev) => [created, ...prev]);
       setDialogOpen(false);
@@ -188,7 +192,12 @@ export default function CompliancePage() {
                     <TableCell className="hidden md:table-cell">{a.ai_generated ? <Badge variant="secondary">Yes</Badge> : <span className="text-sm text-muted-foreground">No</span>}</TableCell>
                     <TableCell className="hidden sm:table-cell text-sm">v{a.version}</TableCell>
                     <TableCell>
-                      <Select value={a.status} onValueChange={(v) => handleStatusChange(a.id, v)}>
+                      <Select
+                        value={a.status}
+                        onValueChange={(v) => {
+                          if (isContentStatus(v)) handleStatusChange(a.id, v);
+                        }}
+                      >
                         <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {CONTENT_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}

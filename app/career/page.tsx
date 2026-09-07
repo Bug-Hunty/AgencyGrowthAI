@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Briefcase, ArrowRight, ArrowLeft, CheckCircle2, Loader2,
@@ -16,13 +16,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { toast } from 'sonner';
-import { scoreCandidate } from '@/lib/scoring';
-import { repo } from '@/lib/repo';
+import { isNhostMode, repo } from '@/lib/repo';
+import { createPublicCandidate } from '@/lib/public-intake';
 import { AGENCY_CONFIG } from '@/lib/constants';
 
 export default function CareerPage() {
   const [step, setStep] = useState<'info' | 'form' | 'success'>('info');
   const [submitting, setSubmitting] = useState(false);
+  const candidateIdempotencyKeyRef = useRef<string | null>(null);
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -50,8 +51,7 @@ export default function CareerPage() {
     }
     setSubmitting(true);
     try {
-      const { score, breakdown } = scoreCandidate(form);
-      await repo.createCandidate({
+      const candidateInput = {
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
@@ -63,9 +63,10 @@ export default function CareerPage() {
         sales_experience: form.sales_experience,
         financial_services_experience: form.financial_services_experience,
         preferred_contact: form.preferred_contact,
-        score,
-        score_breakdown: breakdown,
-      });
+      };
+      if (!candidateIdempotencyKeyRef.current) candidateIdempotencyKeyRef.current = crypto.randomUUID();
+      if (isNhostMode) await createPublicCandidate(candidateInput, candidateIdempotencyKeyRef.current);
+      else await repo.createCandidate(candidateInput);
       toast.success('Application submitted successfully!');
       setStep('success');
     } catch {
@@ -263,40 +264,40 @@ export default function CareerPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>State *</Label>
-                    <Input placeholder="e.g. TX" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} />
+                    <Label htmlFor="c_state">State *</Label>
+                    <Input id="c_state" placeholder="e.g. TX" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Current occupation *</Label>
-                    <Input value={form.current_occupation} onChange={(e) => setForm({ ...form, current_occupation: e.target.value })} />
+                    <Label htmlFor="c_occupation">Current occupation *</Label>
+                    <Input id="c_occupation" value={form.current_occupation} onChange={(e) => setForm({ ...form, current_occupation: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Years of professional experience *</Label>
+                    <Label htmlFor="c_years">Years of professional experience *</Label>
                     <Select value={form.years_experience} onValueChange={(v) => setForm({ ...form, years_experience: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select range" /></SelectTrigger>
+                      <SelectTrigger id="c_years"><SelectValue placeholder="Select range" /></SelectTrigger>
                       <SelectContent>
                         {['0-2', '3-5', '6-10', '10+'].map((v) => <SelectItem key={v} value={v}>{v} years</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Why are you interested? *</Label>
-                    <Textarea rows={3} value={form.why_interested} onChange={(e) => setForm({ ...form, why_interested: e.target.value })} />
+                    <Label htmlFor="c_interest">Why are you interested? *</Label>
+                    <Textarea id="c_interest" rows={3} value={form.why_interested} onChange={(e) => setForm({ ...form, why_interested: e.target.value })} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Sales experience *</Label>
+                      <Label htmlFor="c_sales">Sales experience *</Label>
                       <Select value={form.sales_experience} onValueChange={(v) => setForm({ ...form, sales_experience: v })}>
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectTrigger id="c_sales"><SelectValue placeholder="Select" /></SelectTrigger>
                         <SelectContent>
                           {['none', 'some', 'extensive'].map((v) => <SelectItem key={v} value={v}>{v.replace(/\b\w/g, (c) => c.toUpperCase())}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Financial-services experience *</Label>
+                      <Label htmlFor="c_financial">Financial-services experience *</Label>
                       <Select value={form.financial_services_experience} onValueChange={(v) => setForm({ ...form, financial_services_experience: v })}>
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectTrigger id="c_financial"><SelectValue placeholder="Select" /></SelectTrigger>
                         <SelectContent>
                           {['none', 'some', 'extensive'].map((v) => <SelectItem key={v} value={v}>{v.replace(/\b\w/g, (c) => c.toUpperCase())}</SelectItem>)}
                         </SelectContent>
@@ -304,9 +305,9 @@ export default function CareerPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Preferred contact method *</Label>
+                    <Label htmlFor="c_contact">Preferred contact method *</Label>
                     <Select value={form.preferred_contact} onValueChange={(v) => setForm({ ...form, preferred_contact: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectTrigger id="c_contact"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
                         {['phone', 'email', 'text', 'video'].map((v) => <SelectItem key={v} value={v}>{v.replace(/\b\w/g, (c) => c.toUpperCase())}</SelectItem>)}
                       </SelectContent>

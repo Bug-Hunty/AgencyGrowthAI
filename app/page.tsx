@@ -96,7 +96,7 @@ export default function HomePage() {
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                       <item.icon className="h-6 w-6 text-primary" />
                     </div>
-                    <span className="text-3xl font-bold text-muted-foreground/30">0{i + 1}</span>
+                    <span className="text-3xl font-bold text-muted-foreground">0{i + 1}</span>
                   </div>
                   <CardTitle className="mt-3">{item.title}</CardTitle>
                 </CardHeader>
@@ -443,7 +443,7 @@ export default function HomePage() {
               Ready to Turn Traffic Into Conversations?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-white/90">
-              See how AgencyGrowthAI can transform your agency's client acquisition and recruiting.
+              See how AgencyGrowthAI can transform your agency&apos;s client acquisition and recruiting.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button asChild size="lg" variant="secondary">

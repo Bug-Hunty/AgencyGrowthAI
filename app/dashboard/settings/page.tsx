@@ -6,8 +6,9 @@ import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { isDemoMode } from '@/lib/repo';
+import { dataMode } from '@/lib/repo';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
+import { isNhostConfigured } from '@/lib/nhost/client';
 import { calendarProvider } from '@/lib/integrations/calendar';
 import { AGENCY_CONFIG, LEAD_SCORE_TIERS } from '@/lib/constants';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -46,6 +47,7 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <IntegrationRow label="Supabase Database" connected={isSupabaseConfigured} />
             <IntegrationRow label="Supabase Auth" connected={isSupabaseConfigured} />
+            <IntegrationRow label="Nhost Auth + GraphQL" connected={isNhostConfigured} />
             <IntegrationRow label="Calendar Provider" connected={calendarProvider.connected} name={calendarProvider.name} />
             <IntegrationRow label="AI Provider" connected={false} name="Demo AI Engine (NOT CONNECTED)" />
             <IntegrationRow label="Email Provider" connected={false} name="Not configured" />
@@ -83,8 +85,8 @@ export default function SettingsPage() {
             <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" /> Security & Compliance</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Row label="Authentication" value={isDemo ? 'DEMO MODE (session)' : 'Supabase Auth'} />
-            <Row label="Tenant Isolation" value="agency_id + RLS policies" />
+            <Row label="Authentication" value={isDemo ? 'DEMO MODE (session)' : dataMode === 'nhost' ? 'Nhost Auth' : 'Supabase Auth'} />
+            <Row label="Tenant Isolation" value={dataMode === 'nhost' ? 'Nhost JWT + Hasura permissions' : 'agency_id + RLS policies'} />
             <Row label="Role-Based Access" value="Owner, Admin, Agent, Marketing" />
             <Row label="Consent Tracking" value="Enabled" />
             <Row label="Audit Logging" value="Enabled" />
@@ -106,7 +108,7 @@ export default function SettingsPage() {
               <Row label="Name" value={`${user.first_name} ${user.last_name}`} />
               <Row label="Email" value={user.email} />
               <Row label="Role" value={user.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())} />
-              <Row label="Agency ID" value={user.agency_id} />
+              <Row label="Agency ID" value={user.agency_id || 'Resolved by Hasura membership'} />
               <Row label="Mode" value={isDemo ? 'Demo (no production auth)' : 'Production'} />
             </CardContent>
           </Card>
