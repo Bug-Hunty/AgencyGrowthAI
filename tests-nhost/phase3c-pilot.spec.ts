@@ -258,7 +258,7 @@ test.describe.serial('Phase 3C deployed one-agent pilot', () => {
     candidateId = candidate.id;
     expect(candidate.agency_id).toBe(agencyA);
     expect(candidate.status).toBe('new');
-    await expect(page.getByText('Application Submitted!')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Application Received!', exact: true })).toBeVisible();
   });
 
   test('User A login, restoration, lead updates, appointment update, and logout', async ({ page }) => {
