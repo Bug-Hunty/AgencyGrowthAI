@@ -47,5 +47,11 @@ export function trustedNhostFailure(error: unknown): NextResponse {
   if (code === 'LEAD_NOT_FOUND') return NextResponse.json({ error: 'Lead not found.' }, { status: 404 });
   if (code === 'IDEMPOTENCY_CONFLICT') return NextResponse.json({ error: 'Idempotency key was already used for a different request.' }, { status: 409 });
   if (code === 'NOT_CONFIGURED') return NextResponse.json({ error: 'Public intake is not configured.' }, { status: 503 });
-  return NextResponse.json({ error: 'Could not process the request.' }, { status: 500 });
+  const diagnosticStage = typeof error === 'object' && error !== null && 'diagnosticStage' in error
+    ? String(error.diagnosticStage)
+    : 'UNKNOWN';
+  return NextResponse.json(
+    { error: 'Could not process the request.' },
+    { status: 500, headers: { 'x-agencygrowth-error-stage': diagnosticStage } },
+  );
 }

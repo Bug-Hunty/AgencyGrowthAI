@@ -7,11 +7,13 @@ type GraphQLResult<T> = { data?: T; errors?: Array<{ message?: string }> };
 
 export class TrustedNhostError extends Error {
   readonly code: 'NOT_CONFIGURED' | 'UNKNOWN_AGENCY' | 'LEAD_NOT_FOUND' | 'IDEMPOTENCY_CONFLICT' | 'UPSTREAM_FAILURE';
+  readonly diagnosticStage?: string;
 
-  constructor(code: TrustedNhostError['code']) {
+  constructor(code: TrustedNhostError['code'], diagnosticStage?: string) {
     super(code);
     this.name = 'TrustedNhostError';
     this.code = code;
+    this.diagnosticStage = diagnosticStage;
   }
 }
 
@@ -55,7 +57,7 @@ async function trustedGraphql<T>(query: string, variables: Record<string, unknow
       cache: 'no-store',
     });
   } catch {
-    throw new TrustedNhostError('UPSTREAM_FAILURE');
+    throw new TrustedNhostError('UPSTREAM_FAILURE', 'TRANSPORT');
   }
 
   let body: GraphQLResult<T>;
@@ -66,7 +68,7 @@ async function trustedGraphql<T>(query: string, variables: Record<string, unknow
       status: response.status,
       reason: 'INVALID_JSON_RESPONSE',
     });
-    throw new TrustedNhostError('UPSTREAM_FAILURE');
+    throw new TrustedNhostError('UPSTREAM_FAILURE', 'INVALID_RESPONSE');
   }
   if (!response.ok || body.errors?.length || !body.data) {
     console.error('TRUSTED_NHOST_GRAPHQL_FAILURE', {
@@ -74,7 +76,10 @@ async function trustedGraphql<T>(query: string, variables: Record<string, unknow
       errors: body.errors?.slice(0, 3).map(({ message }) => message ?? 'UNKNOWN_GRAPHQL_ERROR') ?? [],
       hasData: Boolean(body.data),
     });
-    throw new TrustedNhostError('UPSTREAM_FAILURE');
+    throw new TrustedNhostError(
+      'UPSTREAM_FAILURE',
+      response.ok ? 'GRAPHQL' : `HTTP_${response.status}`,
+    );
   }
   return body.data;
 }
