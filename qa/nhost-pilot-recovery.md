@@ -2,6 +2,8 @@
 
 Last verified: 2026-09-07. Scope: `https://agencygrowthai.netlify.app`.
 
+Operational status: `ONE-AGENT PILOT: NO-GO` until the critical direct Next.js dependency finding is patched and the complete security/application regression passes. The recovery evidence below remains valid.
+
 The source default remains `demo`; only the pilot Netlify environment selects `nhost`. The two operator/test Auth users, two agencies, two single-agency memberships, Hasura metadata, and `UNIQUE(public.agents.user_id)` are frozen. No Supabase business backup has been imported.
 
 ## Current evidence

@@ -1,6 +1,6 @@
 # Phase 4 production-readiness assessment
 
-Assessment date: 2026-09-07. The one-agent pilot remains GO; general production is NOT READY.
+Assessment date: 2026-09-07. The one-agent pilot is NO-GO pending a critical framework security patch; general production is NOT READY.
 
 ## Operational inventory
 
@@ -8,6 +8,7 @@ Assessment date: 2026-09-07. The one-agent pilot remains GO; general production 
 - **Nhost:** project/region and PostgreSQL 14 verified. Health endpoints and Hasura admin metadata are reachable. Actual project plan, managed backups/retention/PITR/restore UI/download, project logs, managed Metrics/Grafana, resource metrics, and alerts are NOT VERIFIED because Dashboard browser access was unavailable. DNS for a project Grafana host alone is not entitlement evidence.
 - **Secrets/access:** required Netlify variable names are present; values were not read. Ignored local env files, Netlify env, Nhost Dashboard, and OS credential stores hold secret classes. GitHub and Netlify authenticated access were verified; team/Nhost membership and least privilege are UNKNOWN and were not changed.
 - **Deploy recovery:** authenticated inventory found current ready production deploy `6a9f4c90f36f6e0008023347` / SHA `703a57467fa09f78f32795b211041fcd3a94eb8c` and earlier ready deploys plus a deploy preview. Dry-run identification is reproducible; production was not rolled back.
+- **Dependency risk:** `npm audit --omit=dev` found 20 production-tree vulnerabilities: 1 critical, 14 high, 4 moderate, and 1 low. The direct Next.js 13.5.1 finding includes the critical middleware authorization-bypass advisory and has an indicated non-major update path. No dependency was changed in Phase 4; remediation and full regression are required before reopening the pilot.
 
 ## Recovery
 
@@ -35,7 +36,8 @@ Structured server-only logs define timestamp, validated/generated request ID, ro
 | Category | Result | Evidence/gap |
 | --- | --- | --- |
 | Application correctness | PASS | Phase 3C and 43/43 baseline preserved before Phase 4. |
-| Security/authorization | PASS | Phase 2B and guards pass; metadata hash/consistency unchanged. |
+| Security | BLOCKER | bundle/secret controls pass, but the production dependency audit has 1 critical and 14 high findings. |
+| Authorization | PASS | Phase 2B and guards pass; metadata hash/consistency unchanged. |
 | Data integrity | PASS | 2/2/2 identity rows; zero business rows; membership/idempotency constraints. |
 | Recovery | PARTIAL | application restore verified; full Auth/Storage and managed backup unknown. |
 | Observability | PARTIAL | deployed logs/health/correlation verified; Nhost metrics and consolidated history unknown. |
@@ -47,7 +49,7 @@ Structured server-only logs define timestamp, validated/generated request ID, ro
 | Quality/testing | PASS | 43/43 baseline, SEO 9/9, accessibility 11/11, Phase 2B, Phase 3A 3/3, Phase 3B 4/4, and final Phase 3C 7/7 passed; fixtures cleaned. |
 | Operational access | PARTIAL | authenticated GitHub/Netlify; Nhost roles/least privilege unknown. |
 
-Automatic production blockers remain: no full-project recovery evidence and no verified alert delivery for major failures. Limited retention, absent PITR, and optional 21YunBox could be accepted only after actual plan evidence; they are not inferred here.
+Automatic blockers remain: a critical direct framework advisory, no full-project recovery evidence, and no verified alert delivery for major failures. Limited retention, absent PITR, and optional 21YunBox could be accepted only after actual plan evidence; they are not inferred here.
 
 **PHASE 4 CLASSIFICATION: PARTIAL**
 
