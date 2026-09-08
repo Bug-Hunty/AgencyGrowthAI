@@ -48,6 +48,8 @@ Baseline: 1 critical, 14 high, 4 moderate, 1 low; 20 affected package entries.
 
 Runtime remediation was explicit: Next 15.5.24, React 19, Supabase JS 2.116.0, Recharts 3, React-19-compatible UI peers, and PostCSS 8.5.28. Build/lint-only packages were correctly moved to `devDependencies`. Because Next 15.5.24 pins PostCSS 8.4.31, a root override to PostCSS 8.5.28 is required; builds and regressions validate that same-major substitution.
 
+The first post-upgrade Netlify build completed the Next.js compilation but failed while packaging the pre-existing `user-agent-blocker` edge extension because its `@netlify/blobs` import was unresolved. The official package is now pinned explicitly at `11.0.3`; the production audit, clean install, Next build, types, lint, and bundle-secret checks were repeated afterward. The extension was preserved rather than disabled.
+
 After remediation, `npm audit --omit=dev` reports 0 critical, 0 high, 0 moderate, 0 low. The full audit reports 0 critical, 7 high, 2 moderate, 1 low, all in dev-only ESLint/Tailwind dependency paths. They do not ship in the production install or browser/server runtime; replacing those legacy toolchains is separate maintenance and no `audit fix --force` was used.
 
 ## Next.js advisory inventory for the former 13.5.1 baseline
