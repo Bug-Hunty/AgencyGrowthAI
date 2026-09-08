@@ -17,7 +17,7 @@ This is not a full Nhost backup: Auth/Storage and managed-service recovery are o
 
 ## Observability and alert matrix
 
-Structured server-only logs now define timestamp, validated/generated request ID, route, method, status, duration, outcome, safe error code, and deploy ID for all three intake routes and `/api/health`. Bodies and sensitive fields are excluded. `/api/health` reports only configuration/Auth/GraphQL pass/fail with a 30 s cache. Deployment is required before runtime coverage is VERIFIED.
+Structured server-only logs define timestamp, validated/generated request ID, route, method, status, duration, outcome, safe error code, and deployment context where available for all three intake routes and `/api/health`. Bodies and sensitive fields are excluded. Deployed Function Logs captured the JSON schema and preserved an opaque correlation ID. `/api/health` returned healthy with only configuration/Auth/GraphQL pass/fail and a 30 s cache; the deployed smoke rejected malformed requests on all three intake routes without writes.
 
 | Alert | Signal / threshold / window | Severity | Target / status | Runbook |
 | --- | --- | --- | --- | --- |
@@ -38,7 +38,7 @@ Structured server-only logs now define timestamp, validated/generated request ID
 | Security/authorization | PASS | Phase 2B and guards pass; metadata hash/consistency unchanged. |
 | Data integrity | PASS | 2/2/2 identity rows; zero business rows; membership/idempotency constraints. |
 | Recovery | PARTIAL | application restore verified; full Auth/Storage and managed backup unknown. |
-| Observability | PARTIAL | safe instrumentation implemented; deployed runtime/log evidence pending; Nhost metrics unknown. |
+| Observability | PARTIAL | deployed logs/health/correlation verified; Nhost metrics and consolidated history unknown. |
 | Alerting | BLOCKER | hooks exist but delivery and application alerts are not verified. |
 | Incident response | PASS | scoped runbooks are source-controlled and testable. |
 | Deployment/rollback | PASS | current/previous deploy identification and dry-run procedure verified. |

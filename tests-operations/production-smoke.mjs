@@ -11,7 +11,11 @@ async function check(path, options, accepted) {
 
 await check('/', {}, [200]);
 await check('/login', {}, [200]);
-await check('/dashboard', {}, [302, 303, 307, 308]);
+const dashboard = await check('/dashboard', {}, [200, 302, 303, 307, 308]);
+if (dashboard.status === 200) {
+  const html = await dashboard.text();
+  if (!html.includes('Loading') || html.includes('Total Leads') || html.includes('Welcome back')) throw new Error('ANONYMOUS_DASHBOARD_CONTENT_EXPOSED');
+}
 const health = await check('/api/health', {}, [200]);
 const healthBody = await health.json();
 if (healthBody.status !== 'healthy' || Object.values(healthBody.checks ?? {}).some((value) => value !== 'pass')) throw new Error('HEALTH_DEPENDENCIES_NOT_HEALTHY');

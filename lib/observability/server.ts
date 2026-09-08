@@ -41,7 +41,7 @@ export function withOperationalLogging(route: string, handler: RouteHandler): Ro
       duration_ms: Date.now() - startedAt,
       outcome: outcomeFor(response.status),
       error_code: response.status >= 400 ? `HTTP_${response.status}` : null,
-      deploy_id: process.env.DEPLOY_ID ?? process.env.BUILD_ID ?? 'local',
+      deploy_id: process.env.DEPLOY_ID ?? process.env.COMMIT_REF ?? process.env.BUILD_ID ?? process.env.CONTEXT ?? 'unknown',
     };
     console.info(JSON.stringify(record));
     return response;
