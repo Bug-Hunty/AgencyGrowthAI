@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Mail, Phone, Calendar, User, Activity, Brain, ShieldCheck } from 'lucide-react';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
@@ -17,8 +17,8 @@ import { LEAD_STATUSES, LEAD_SCORE_TIERS, ROLES } from '@/lib/constants';
 import { aiProvider } from '@/lib/ai';
 import type { Lead, Agent, Appointment, LeadEvent } from '@/lib/types';
 
-export default function LeadDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [lead, setLead] = useState<Lead | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);

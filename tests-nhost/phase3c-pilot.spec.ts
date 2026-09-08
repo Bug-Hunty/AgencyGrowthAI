@@ -121,6 +121,16 @@ async function browserLogout(page: Page) {
 test.describe.serial('Phase 3C deployed one-agent pilot', () => {
   test.beforeAll(async () => {
     for (const value of [subdomain, region, adminSecret, credential.a.email, credential.a.password, credential.b.email, credential.b.password]) expect(value).not.toBe('');
+    await cleanup();
+    expect(await counts()).toEqual(['0', '0', '0', '0']);
+    const agencies = await sql("SELECT id::text, public_slug FROM public.agencies WHERE public_slug IN ('phase2b-a','phase2b-b') ORDER BY public_slug;");
+    expect(agencies.status).toBe(200);
+    agencyA = agencies.body.result[1][0];
+    agencyB = agencies.body.result[2][0];
+    const exported = await metadata({ type: 'export_metadata', args: {} });
+    expect(exported.status).toBe(200);
+    metadataHash = createHash('sha256').update(exported.text).digest('hex').toUpperCase();
+
     sessionA = await authLogin(credential.a.email, credential.a.password);
     sessionB = await authLogin(credential.b.email, credential.b.password);
     expect(sessionA.user.id).not.toBe(sessionB.user.id);
@@ -132,15 +142,6 @@ test.describe.serial('Phase 3C deployed one-agent pilot', () => {
     expect(claimsB['x-hasura-user-id']).toBe(sessionB.user.id);
     expect(claimsA['x-hasura-default-role']).toBe('user');
     expect(claimsB['x-hasura-default-role']).toBe('user');
-    await cleanup();
-    expect(await counts()).toEqual(['0', '0', '0', '0']);
-    const agencies = await sql("SELECT id::text, public_slug FROM public.agencies WHERE public_slug IN ('phase2b-a','phase2b-b') ORDER BY public_slug;");
-    expect(agencies.status).toBe(200);
-    agencyA = agencies.body.result[1][0];
-    agencyB = agencies.body.result[2][0];
-    const exported = await metadata({ type: 'export_metadata', args: {} });
-    expect(exported.status).toBe(200);
-    metadataHash = createHash('sha256').update(exported.text).digest('hex').toUpperCase();
   });
 
   test.afterAll(async () => {

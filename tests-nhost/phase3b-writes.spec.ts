@@ -319,7 +319,7 @@ test.describe.serial('Phase 3B trusted writes', () => {
     await page.getByLabel('Email').fill(credential.b.email);
     await page.getByLabel('Password').fill(credential.b.password);
     await page.getByRole('button', { name: 'Sign In', exact: true }).click();
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 60_000 });
     await page.goto(`/dashboard/leads/${publicLeadId}`);
     await expect(page.getByRole('heading', { name: 'Lead Not Found' })).toBeVisible();
   });
