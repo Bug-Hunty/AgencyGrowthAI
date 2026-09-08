@@ -23,6 +23,11 @@
     "test:nhost:secrets": "node tests-nhost/secret-safety.mjs",
     "test:nhost:bundle-secrets": "node tests-nhost/production-bundle-secret-safety.mjs",
     "test:nhost:phase3c": "playwright test --config=playwright.nhost.phase3c.config.ts",
+    "test:ops:baseline": "node tests-operations/remote-baseline.mjs",
+    "test:ops:observability": "node tests-operations/observability-guard.mjs",
+    "test:ops:smoke": "node tests-operations/production-smoke.mjs",
+    "test:ops:recovery": "node tests-operations/hasura-recovery-drill.mjs",
+    "test:ops:runbooks": "node tests-operations/runbook-guard.mjs",
     "test:e2e:baseline": "npm run build && playwright test --config=playwright.prod.config.ts --workers=1 --reporter=json > .playwright-report.json && node scripts/check-baseline.mjs .playwright-report.json"
   },
   "dependencies": {

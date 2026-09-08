@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { parsePublicRequest, trustedNhostFailure } from '@/lib/http/public-request';
 import { trustedCreateAppointment } from '@/lib/nhost/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { withOperationalLogging } from '@/lib/observability/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,7 +18,7 @@ const appointmentSchema = z.object({
   notes: z.string().trim().max(2_000).nullable().optional(),
 }).strict();
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   const parsed = await parsePublicRequest(request, appointmentSchema);
   if (!parsed.ok) return parsed.response;
   const body = parsed.value;
@@ -61,3 +62,5 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: 'Could not create the appointment.' }, { status: 500 });
   return NextResponse.json(data, { status: 201, headers: { 'cache-control': 'no-store' } });
 }
+
+export const POST = withOperationalLogging('/api/public/appointments', handlePost);

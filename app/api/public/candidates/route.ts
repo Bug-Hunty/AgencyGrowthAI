@@ -4,6 +4,7 @@ import { parsePublicRequest, trustedNhostFailure } from '@/lib/http/public-reque
 import { trustedCreateCandidate } from '@/lib/nhost/server';
 import { scoreCandidate } from '@/lib/scoring';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { withOperationalLogging } from '@/lib/observability/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ const candidateSchema = z.object({
   preferred_contact: z.enum(['phone', 'email', 'text', 'video']),
 }).strict();
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   const parsed = await parsePublicRequest(request, candidateSchema);
   if (!parsed.ok) return parsed.response;
   const body = parsed.value;
@@ -75,3 +76,5 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: 'Could not create the candidate.' }, { status: 500 });
   return NextResponse.json(data, { status: 201, headers: { 'cache-control': 'no-store' } });
 }
+
+export const POST = withOperationalLogging('/api/public/candidates', handlePost);

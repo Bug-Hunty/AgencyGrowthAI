@@ -71,7 +71,7 @@ async function trustedGraphql<T>(query: string, variables: Record<string, unknow
   if (!response.ok || body.errors?.length || !body.data) {
     console.error('TRUSTED_NHOST_GRAPHQL_FAILURE', {
       status: response.status,
-      errors: body.errors?.slice(0, 3).map(({ message }) => message ?? 'UNKNOWN_GRAPHQL_ERROR') ?? [],
+      errorCount: body.errors?.length ?? 0,
       hasData: Boolean(body.data),
     });
     throw new TrustedNhostError('UPSTREAM_FAILURE');

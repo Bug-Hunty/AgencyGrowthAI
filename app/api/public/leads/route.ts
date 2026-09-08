@@ -4,6 +4,7 @@ import { parsePublicRequest, trustedNhostFailure } from '@/lib/http/public-reque
 import { trustedCreateLead } from '@/lib/nhost/server';
 import { scoreLead } from '@/lib/scoring';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { withOperationalLogging } from '@/lib/observability/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,7 +40,7 @@ const leadSchema = z.object({
   ai_summary: z.string().trim().max(2_000).nullable().optional(),
 }).strict();
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   const parsed = await parsePublicRequest(request, leadSchema);
   if (!parsed.ok) return parsed.response;
   const body = parsed.value;
@@ -98,3 +99,5 @@ export async function POST(request: Request) {
   }
   return NextResponse.json(data, { status: 201, headers: { 'cache-control': 'no-store' } });
 }
+
+export const POST = withOperationalLogging('/api/public/leads', handlePost);
