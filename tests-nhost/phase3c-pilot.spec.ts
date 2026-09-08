@@ -101,7 +101,14 @@ async function browserLogin(page: Page, tenant: 'a' | 'b') {
   await expect(page.getByText('DEMO MODE')).toHaveCount(0);
   await page.getByLabel('Email').fill(credential[tenant].email);
   await page.getByLabel('Password').fill(credential[tenant].password);
+  const authResponse = page.waitForResponse((response) => response.url().includes('/signin/email-password') && response.request().method() === 'POST');
   await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  const response = await authResponse;
+  if (page.url().endsWith('/login')) {
+    await page.getByLabel('Email').fill('');
+    await page.getByLabel('Password').fill('');
+  }
+  expect(response.status()).toBe(200);
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 60_000 });
   await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
 }

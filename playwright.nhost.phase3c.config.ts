@@ -35,8 +35,9 @@ export default defineConfig({
     browserName: 'chromium',
     channel: 'chrome',
     headless: true,
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
+    // Auth requests carry test credentials. Failure traces/screenshots must not persist them.
+    trace: 'off',
+    screenshot: 'off',
     video: 'off',
   },
 });
